@@ -1000,6 +1000,13 @@ public class RexBuilder {
     return makeLiteral(bd, bigintType, SqlTypeName.DECIMAL);
   }
 
+	public RexLiteral makeFloatLiteral(Float value) {
+		RelDataType bigintType =
+				typeFactory.createSqlType(
+						SqlTypeName.FLOAT);
+		return makeLiteral(value, bigintType, SqlTypeName.FLOAT);
+	}
+
   /**
    * Creates a numeric literal.
    */

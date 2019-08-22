@@ -583,6 +583,7 @@ public class RexBuilderTest {
     checkBigDecimalLiteral(builder, "25");
     checkBigDecimalLiteral(builder, "9.9");
     checkBigDecimalLiteral(builder, "0");
+	  checkBigDecimalLiteral(builder, 0L);
     checkBigDecimalLiteral(builder, "-75.5");
     checkBigDecimalLiteral(builder, "10000000");
     checkBigDecimalLiteral(builder, "100000.111111111111111111");
@@ -591,7 +592,8 @@ public class RexBuilderTest {
     checkBigDecimalLiteral(builder, "-73786976294838206464");
   }
 
-  /** Tests {@link RexCopier#visitOver(RexOver)} */
+
+	/** Tests {@link RexCopier#visitOver(RexOver)} */
   @Test public void testCopyOver() {
     final RelDataTypeFactory sourceTypeFactory =
         new SqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
@@ -609,9 +611,9 @@ public class RexBuilderTest {
             new RexFieldCollation(
                 builder.makeInputRef(type, 2), ImmutableSet.of())),
         RexWindowBound.create(
-            SqlWindow.createUnboundedPreceding(SqlParserPos.ZERO), null),
+		        null, null),
         RexWindowBound.create(
-            SqlWindow.createCurrentRow(SqlParserPos.ZERO), null),
+		        null, null),
         true, true, false, false, false);
     final RexNode copy = builder.copy(node);
     assertTrue(copy instanceof RexOver);
@@ -719,6 +721,23 @@ public class RexBuilderTest {
             + ")).getValueAs(BigDecimal.class).toString()",
         literal.getValueAs(BigDecimal.class).toString(), is(val));
   }
+
+	private void checkBigDecimalLiteral(RexBuilder builder, Long val) {
+		final RexLiteral literal = builder.makeExactLiteral(new BigDecimal(val));
+		assertThat("builder.makeExactLiteral(new BigDecimal(" + val
+						+ ")).getValueAs(BigDecimal.class).toString()",
+				literal.getValueAs(BigDecimal.class).toString(), is(val));
+	}
+
+	@Test
+	public void testFloat() {
+		final RelDataTypeFactory targetTypeFactory =
+				new MySqlTypeFactoryImpl(RelDataTypeSystem.DEFAULT);
+		final RexBuilder builder = new RexBuilder(targetTypeFactory);
+		RexLiteral literal = builder.makeFloatLiteral(1f);
+		System.out.println(literal.toString());
+	}
+
 
 }
 
