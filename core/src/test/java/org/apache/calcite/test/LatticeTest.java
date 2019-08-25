@@ -306,13 +306,20 @@ public class LatticeTest {
         .connectThrows("only equi-join of columns allowed: 100");
   }
 
-  /** Left join is invalid in a lattice. */
+  /** Left join and Right join are invalid in a lattice. */
   @Test public void testLatticeInvalidSql2() {
     modelWithLattice("star",
         "select 1 from \"foodmart\".\"sales_fact_1997\" as s\n"
         + "join \"foodmart\".\"product\" as p using (\"product_id\")\n"
         + "left join \"foodmart\".\"time_by_day\" as t on s.\"product_id\" = p.\"product_id\"")
         .connectThrows("only non nulls-generating join allowed, but got LEFT");
+
+    modelWithLattice("star",
+        "select 1 from \"foodmart\".\"sales_fact_1997\" as s\n"
+            + "join \"foodmart\".\"product\" as p using (\"product_id\")\n"
+            + "right join \"foodmart\".\"time_by_day\" as t on s.\"product_id\" = p.\"product_id\"")
+        .connectThrows("only non nulls-generating join allowed, but got RIGHT");
+
   }
 
   /** Each lattice table must have a parent. */
