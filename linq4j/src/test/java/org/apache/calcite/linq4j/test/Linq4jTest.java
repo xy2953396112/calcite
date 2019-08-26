@@ -621,6 +621,16 @@ public class Linq4jTest {
     assertFalse(idComparer.equal(one, two));
   }
 
+  @SuppressWarnings("UnnecessaryBoxing")
+  @Test public void testArrayEqualityComparer() {
+    Integer[] a = new Integer[]{1, 2};
+    Integer[] b = new Integer[]{1, 2};
+    Integer[] c = new Integer[]{1, 3};
+    final EqualityComparer<Integer[]> idComparer = Functions.arrayComparer();
+    assertTrue(idComparer.equal(a, b));
+    assertTrue(idComparer.equal(a, c));
+  }
+
   @Test public void testSelectorEqualityComparer() {
     final EqualityComparer<Employee> comparer =
         Functions.selectorComparer((Function1<Employee, Object>) a0 -> a0.deptno);
@@ -1364,6 +1374,19 @@ public class Linq4jTest {
             .toList();
 
     assertEquals(0, deptList.size());
+  }
+
+  @Test public void testTakeWhileMatch() {
+    final Queryable<Department> queryableDepts =
+        Linq4j.asEnumerable(depts).asQueryable();
+    Predicate2<Department, Integer> function2 = Functions.truePredicate2();
+    final List<Department> deptList =
+        QueryableDefaults.takeWhileN(
+            queryableDepts,
+            Expressions.lambda(function2))
+            .toList();
+
+    assertEquals(3, deptList.size());
   }
 
   @Test public void testSkip() {
