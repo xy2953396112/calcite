@@ -17,21 +17,7 @@
 package org.apache.calcite.linq4j.test;
 
 import org.apache.calcite.linq4j.function.Function1;
-import org.apache.calcite.linq4j.tree.BlockBuilder;
-import org.apache.calcite.linq4j.tree.BlockStatement;
-import org.apache.calcite.linq4j.tree.Blocks;
-import org.apache.calcite.linq4j.tree.ClassDeclaration;
-import org.apache.calcite.linq4j.tree.DeclarationStatement;
-import org.apache.calcite.linq4j.tree.Expression;
-import org.apache.calcite.linq4j.tree.Expressions;
-import org.apache.calcite.linq4j.tree.FieldDeclaration;
-import org.apache.calcite.linq4j.tree.FunctionExpression;
-import org.apache.calcite.linq4j.tree.MethodCallExpression;
-import org.apache.calcite.linq4j.tree.NewExpression;
-import org.apache.calcite.linq4j.tree.Node;
-import org.apache.calcite.linq4j.tree.ParameterExpression;
-import org.apache.calcite.linq4j.tree.Shuttle;
-import org.apache.calcite.linq4j.tree.Types;
+import org.apache.calcite.linq4j.tree.*;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -320,6 +306,47 @@ public class ExpressionTest {
     // arg => (arg +2)
     // 3.0
     assertEquals(3.0f, n, 0f);
+  }
+
+  @Test public void testLambdaCallsBinaryMod() {
+    // A parameter for the lambda expression.
+    ParameterExpression paramExpr =
+            Expressions.parameter(Integer.TYPE, "arg");
+
+    // This expression represents a lambda expression
+    // that adds 1 to the parameter value.
+    FunctionExpression lambdaExpr = Expressions.lambda(
+            Expressions.mod(
+                    paramExpr,
+                    Expressions.constant(2)),
+            Arrays.asList(paramExpr));
+    // Print out the expression.
+    String s = Expressions.toString(lambdaExpr);
+    assertEquals(
+            "new org.apache.calcite.linq4j.function.Function1() {\n"
+                    + "  public int apply(int arg) {\n"
+                    + "    return arg % 2;\n"
+                    + "  }\n"
+                    + "  public Object apply(Integer arg) {\n"
+                    + "    return apply(\n"
+                    + "      arg.intValue());\n"
+                    + "  }\n"
+                    + "  public Object apply(Object arg) {\n"
+                    + "    return apply(\n"
+                    + "      (Integer) arg);\n"
+                    + "  }\n"
+                    + "}\n",
+            s);
+
+    // Compile and run the lambda expression.
+    // The value of the parameter is 1
+    Integer n = (Integer) lambdaExpr.compile().dynamicInvoke(3);
+
+    // This code example produces the following output:
+    //
+    // arg => (arg % 2)
+    // 1
+    assertEquals(1, n, 0);
   }
 
   @Test public void testLambdaPrimitiveTwoArgs() {
@@ -821,6 +848,23 @@ public class ExpressionTest {
                         Expressions.constant(2),
                         Expressions.variable(int.class, "index"))))));
   }
+
+  @Test public void testWriteArray1() {
+
+   // UnaryExpression a = Expressions.arrayLength();
+    assertEquals(
+            "1 + integers[2 + index]",
+            Expressions.toString(
+                    Expressions.add(
+                            Expressions.constant(1),
+                            Expressions.arrayIndex(
+                                    Expressions.variable(int[].class, "integers"),
+                                    Expressions.add(
+                                            Expressions.constant(2),
+                                            Expressions.variable(int.class, "index"))))));
+  }
+
+
 
   @Test public void testWriteAnonymousClass() {
     // final List<String> baz = Arrays.asList("foo", "bar");
@@ -1517,6 +1561,12 @@ public class ExpressionTest {
   @Test public void testEvaluate() {
     Expression x = Expressions.add(ONE, TWO);
     Object value = Expressions.evaluate(x);
+    NewArrayExpression arrayExpression = Expressions.newArrayInit(
+            String.class,
+            Expressions.constant("foo"),
+            Expressions.constant("bar\"baz"));
+    Object value1 = Expressions.evaluate(Expressions.arrayLength(arrayExpression));
+
     assertThat(value, is(3));
   }
 
