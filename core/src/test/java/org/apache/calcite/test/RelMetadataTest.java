@@ -842,6 +842,26 @@ public class RelMetadataTest extends SqlToRelTestBase {
     assertThat(result, nullValue());
   }
 
+  @Test public void testDistinctRowCountTableUnion() {
+    // no unique key information is available so return null
+    RelNode rel = convertSql("select * from emp union select * from emp");
+    final RelMetadataQuery mq = rel.getCluster().getMetadataQuery();
+    ImmutableBitSet groupKey =
+            ImmutableBitSet.of(rel.getRowType().getFieldNames().indexOf("DEPTNO"));
+    Double result = mq.getDistinctRowCount(rel, groupKey, null);
+    assertThat(result, nullValue());
+  }
+
+  @Test public void testDistinctRowCountTableIntersect() {
+    // no unique key information is available so return null
+    RelNode rel = convertSql("select * from emp intersect all select * from emp");
+    final RelMetadataQuery mq = rel.getCluster().getMetadataQuery();
+    ImmutableBitSet groupKey =
+            ImmutableBitSet.of(rel.getRowType().getFieldNames().indexOf("DEPTNO"));
+    Double result = mq.getDistinctRowCount(rel, groupKey, null);
+    assertThat(result, nullValue());
+  }
+
   @Test public void testDistinctRowCountTableEmptyKey() {
     RelNode rel = convertSql("select * from emp where deptno = 10");
     ImmutableBitSet groupKey = ImmutableBitSet.of(); // empty key
