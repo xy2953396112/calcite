@@ -19,6 +19,7 @@ package org.apache.calcite.rel.metadata;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Correlate;
+import org.apache.calcite.rel.core.Exchange;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinInfo;
@@ -71,6 +72,11 @@ public class RelMdUniqueKeys
   public Set<ImmutableBitSet> getUniqueKeys(Correlate rel, RelMetadataQuery mq,
       boolean ignoreNulls) {
     return mq.getUniqueKeys(rel.getLeft(), ignoreNulls);
+  }
+
+  public Set<ImmutableBitSet> getUniqueKeys(Exchange rel, RelMetadataQuery mq,
+      boolean ignoreNulls) {
+    return mq.getUniqueKeys(rel.getInput(), ignoreNulls);
   }
 
   public Set<ImmutableBitSet> getUniqueKeys(Project rel, RelMetadataQuery mq,
