@@ -1,11 +1,9 @@
 package org.apache.calcite.sql.dialect;
 
-import org.apache.calcite.config.NullCollation;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.sql.*;
-import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.JoinType;
+import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlWriter;
 
 /**
  * A <code>SqlDialect</code> implementation for the SQLite database.
@@ -28,13 +26,12 @@ public class SqliteSqlDialect extends SqlDialect {
     }
 
     @Override public void unparseOffsetFetch(SqlWriter writer, SqlNode offset,
-        SqlNode fetch) {
+                                             SqlNode fetch) {
         unparseFetchUsingLimit(writer, offset, fetch);
     }
 
     @Override public JoinType emulateJoinTypeForCrossJoin() {
         return JoinType.CROSS;
     }
-
 
 }
