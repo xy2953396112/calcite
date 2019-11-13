@@ -45,6 +45,7 @@ import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.apache.calcite.sql.dialect.RedshiftSqlDialect;
 import org.apache.calcite.sql.dialect.SnowflakeSqlDialect;
 import org.apache.calcite.sql.dialect.SparkSqlDialect;
+import org.apache.calcite.sql.dialect.SqliteSqlDialect;
 import org.apache.calcite.sql.dialect.SybaseSqlDialect;
 import org.apache.calcite.sql.dialect.TeradataSqlDialect;
 import org.apache.calcite.sql.dialect.VerticaSqlDialect;
@@ -129,7 +130,10 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       return new SnowflakeSqlDialect(c);
     case "SPARK":
       return new SparkSqlDialect(c);
+    case "SQLITE":
+      return new SqliteSqlDialect(c);
     }
+
     // Now the fuzzy matches.
     if (databaseProductName.startsWith("DB2")) {
       return new Db2SqlDialect(c);
@@ -161,6 +165,8 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       return new SnowflakeSqlDialect(c);
     } else if (upperProductName.contains("SPARK")) {
       return new SparkSqlDialect(c);
+    } else if (upperProductName.contains("SQLITE")) {
+      return new SqliteSqlDialect(c);
     } else {
       return new AnsiSqlDialect(c);
     }
@@ -292,6 +298,8 @@ public class SqlDialectFactoryImpl implements SqlDialectFactory {
       return VerticaSqlDialect.DEFAULT;
     case SPARK:
       return SparkSqlDialect.DEFAULT;
+    case SQLITE:
+      return SqliteSqlDialect.DEFAULT;
     case SQLSTREAM:
     case UNKNOWN:
     default:
