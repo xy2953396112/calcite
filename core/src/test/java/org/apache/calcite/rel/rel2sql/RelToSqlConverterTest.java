@@ -3756,6 +3756,13 @@ public class RelToSqlConverterTest {
     sql(query).ok(expected);
   }
 
+  @Test public void testQueryInSqlite() {
+    final String query = "SELECT \"product_id\" FROM \"product\" ";
+    final String expected = "SELECT product_id\n"
+            + "FROM foodmart.product";
+    sql(query).withSqlite().ok(expected);
+  }
+
   @Test public void testCrossJoinEmulationForSpark() {
     String query = "select * from \"employee\", \"department\"";
     final String expected = "SELECT *\n"
@@ -4212,6 +4219,10 @@ public class RelToSqlConverterTest {
 
     Sql withSpark() {
       return dialect(DatabaseProduct.SPARK.getDialect());
+    }
+
+    Sql withSqlite() {
+      return dialect(DatabaseProduct.SQLITE.getDialect());
     }
 
     Sql withPostgresqlModifiedTypeSystem() {
