@@ -259,6 +259,14 @@ public class MssqlSqlDialect extends SqlDialect {
     unparseSqlIntervalLiteralMssql(writer, literal, 1);
   }
 
+  @Override public boolean supportsGroupByWithRollup() {
+    return true;
+  }
+
+  @Override public boolean supportsGroupByWithCube() {
+    return true;
+  }
+
   private void unparseSqlIntervalLiteralMssql(
       SqlWriter writer, SqlIntervalLiteral literal, int sign) {
     final SqlIntervalLiteral.IntervalValue interval =
