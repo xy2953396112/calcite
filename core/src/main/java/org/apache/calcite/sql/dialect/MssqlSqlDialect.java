@@ -166,6 +166,14 @@ public class MssqlSqlDialect extends SqlDialect {
     return false;
   }
 
+  @Override public boolean supportsGroupByWithRollup() {
+    return true;
+  }
+
+  @Override public boolean supportsGroupByWithCube() {
+    return true;
+  }
+
   /**
    * Unparses datetime floor for Microsoft SQL Server.
    * There is no TRUNC function, so simulate this using calls to CONVERT.
@@ -257,14 +265,6 @@ public class MssqlSqlDialect extends SqlDialect {
   @Override public void unparseSqlIntervalLiteral(
       SqlWriter writer, SqlIntervalLiteral literal, int leftPrec, int rightPrec) {
     unparseSqlIntervalLiteralMssql(writer, literal, 1);
-  }
-
-  @Override public boolean supportsGroupByWithRollup() {
-    return true;
-  }
-
-  @Override public boolean supportsGroupByWithCube() {
-    return true;
   }
 
   private void unparseSqlIntervalLiteralMssql(
