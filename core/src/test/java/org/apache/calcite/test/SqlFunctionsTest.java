@@ -45,6 +45,7 @@ import static org.apache.calcite.runtime.SqlFunctions.posixRegex;
 import static org.apache.calcite.runtime.SqlFunctions.regexpReplace;
 import static org.apache.calcite.runtime.SqlFunctions.rtrim;
 import static org.apache.calcite.runtime.SqlFunctions.sha1;
+import static org.apache.calcite.runtime.SqlFunctions.sha256;
 import static org.apache.calcite.runtime.SqlFunctions.subtractMonths;
 import static org.apache.calcite.runtime.SqlFunctions.toBase64;
 import static org.apache.calcite.runtime.SqlFunctions.trim;
@@ -938,6 +939,20 @@ public class SqlFunctionsTest {
         is(sha1(new ByteString("ABC".getBytes(UTF_8)))));
     try {
       String o = sha1((String) null);
+      fail("Expected NPE, got " + o);
+    } catch (NullPointerException e) {
+      // ok
+    }
+  }
+
+  @Test public void testSha256() {
+    assertThat("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", is(sha256("")));
+    assertThat("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", is(sha256(ByteString.of("", 16))));
+    assertThat("b5d4045c3f466fa91fe2cc6abe79232a1a57cdf104f7a26e716e0a1e2789df78", is(sha256("ABC")));
+    assertThat("b5d4045c3f466fa91fe2cc6abe79232a1a57cdf104f7a26e716e0a1e2789df78",
+            is(sha256(new ByteString("ABC".getBytes(UTF_8)))));
+    try {
+      String o = sha256((String) null);
       fail("Expected NPE, got " + o);
     } catch (NullPointerException e) {
       // ok

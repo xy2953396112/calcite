@@ -194,6 +194,16 @@ public class SqlFunctions {
     return DigestUtils.sha1Hex(string.getBytes());
   }
 
+  /** SQL SHA256(string) function. */
+  public static @Nonnull String sha256(@Nonnull String string)  {
+    return DigestUtils.sha256Hex(string.getBytes(UTF_8));
+  }
+
+  /** SQL SHA256(string) function for binary string. */
+  public static @Nonnull String sha256(@Nonnull ByteString string)  {
+    return DigestUtils.sha256Hex(string.getBytes());
+  }
+
   /** SQL {@code REGEXP_REPLACE} function with 3 arguments. */
   public static String regexpReplace(String s, String regex,
       String replacement) {

@@ -336,6 +336,16 @@ public abstract class SqlLibraryOperators {
           OperandTypes.or(OperandTypes.STRING, OperandTypes.BINARY),
           SqlFunctionCategory.STRING);
 
+  @LibraryOperator(libraries = {MYSQL, POSTGRESQL})
+  public static final SqlFunction SHA256 =
+          new SqlFunction("SHA256",
+          SqlKind.OTHER_FUNCTION,
+          ReturnTypes.cascade(ReturnTypes.explicit(SqlTypeName.VARCHAR),
+              SqlTypeTransforms.TO_NULLABLE),
+          null,
+          OperandTypes.or(OperandTypes.STRING, OperandTypes.BINARY),
+          SqlFunctionCategory.STRING);
+
   /** Infix "::" cast operator used by PostgreSQL, for example
    * {@code '100'::INTEGER}. */
   @LibraryOperator(libraries = { POSTGRESQL })

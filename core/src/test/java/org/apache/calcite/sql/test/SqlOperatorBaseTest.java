@@ -4414,6 +4414,23 @@ public abstract class SqlOperatorBaseTest {
         "VARCHAR NOT NULL");
   }
 
+  @Test public void testSha256() {
+    final SqlTester tester1 = tester(SqlLibrary.MYSQL);
+    tester1.setFor(SqlLibraryOperators.SHA256);
+    tester1.checkString("sha256(x'')",
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "VARCHAR NOT NULL");
+    tester1.checkString("sha256('')",
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "VARCHAR NOT NULL");
+    tester1.checkString("sha256('ABC')",
+            "b5d4045c3f466fa91fe2cc6abe79232a1a57cdf104f7a26e716e0a1e2789df78",
+            "VARCHAR NOT NULL");
+    tester1.checkString("sha256(x'414243')",
+            "b5d4045c3f466fa91fe2cc6abe79232a1a57cdf104f7a26e716e0a1e2789df78",
+            "VARCHAR NOT NULL");
+  }
+
   @Test public void testRepeatFunc() {
     final SqlTester tester1 = tester(SqlLibrary.MYSQL);
     tester1.setFor(SqlLibraryOperators.REPEAT);
