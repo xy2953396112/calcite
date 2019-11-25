@@ -41,7 +41,9 @@ import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rel.core.Intersect;
 import org.apache.calcite.rel.core.Match;
+import org.apache.calcite.rel.core.Minus;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.Sort;
@@ -52,7 +54,9 @@ import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalJoin;
+import org.apache.calcite.rel.logical.LogicalIntersect;
 import org.apache.calcite.rel.logical.LogicalMatch;
+import org.apache.calcite.rel.logical.LogicalMinus;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.logical.LogicalUnion;
@@ -107,6 +111,12 @@ public class Bindables {
   public static final RelOptRule BINDABLE_UNION_RULE =
       new BindableUnionRule(RelFactories.LOGICAL_BUILDER);
 
+  public static final RelOptRule BINDABLE_INTERSECT_RULE =
+    new BindableIntersectRule(RelFactories.LOGICAL_BUILDER);
+
+  public static final RelOptRule BINDABLE_MINUS_RULE =
+    new BindableUnionRule(RelFactories.LOGICAL_BUILDER);
+
   public static final RelOptRule BINDABLE_VALUES_RULE =
       new BindableValuesRule(RelFactories.LOGICAL_BUILDER);
 
@@ -129,6 +139,8 @@ public class Bindables {
           BINDABLE_SORT_RULE,
           BINDABLE_JOIN_RULE,
           BINDABLE_UNION_RULE,
+          BINDABLE_INTERSECT_RULE,
+          BINDABLE_MINUS_RULE,
           BINDABLE_VALUES_RULE,
           BINDABLE_AGGREGATE_RULE,
           BINDABLE_WINDOW_RULE,
@@ -555,6 +567,84 @@ public class Bindables {
     public BindableUnion copy(RelTraitSet traitSet, List<RelNode> inputs,
         boolean all) {
       return new BindableUnion(getCluster(), traitSet, inputs, all);
+    }
+
+    public Class<Object[]> getElementType() {
+      return Object[].class;
+    }
+
+    public Enumerable<Object[]> bind(DataContext dataContext) {
+      return help(dataContext, this);
+    }
+
+    public Node implement(InterpreterImplementor implementor) {
+      return new SetOpNode(implementor.compiler, this);
+    }
+  }
+
+  /**
+   * Rule to convert an {@link org.apache.calcite.rel.logical.LogicalUnion}
+   * to a {@link BindableIntersect}.
+   */
+  public static class BindableIntersectRule extends ConverterRule {
+
+    /**
+     * Creates a BindableUnionRule.
+     *
+     * @param relBuilderFactory Builder for relational expressions
+     */
+    public BindableIntersectRule(RelBuilderFactory relBuilderFactory) {
+      super(LogicalIntersect.class, (Predicate<RelNode>) r -> true,
+        Convention.NONE, BindableConvention.INSTANCE, relBuilderFactory,
+        "BindableUnionRule");
+    }
+
+    public RelNode convert(RelNode rel) {
+      final LogicalIntersect intersect = (LogicalIntersect) rel;
+      final BindableConvention out = BindableConvention.INSTANCE;
+      final RelTraitSet traitSet = intersect.getTraitSet().replace(out);
+      return new BindableUnion(rel.getCluster(), traitSet,
+        convertList(intersect.getInputs(), out), intersect.all);
+    }
+  }
+
+  /** Implementation of {@link org.apache.calcite.rel.core.Intersect} in
+   * bindable calling convention. */
+  public static class BindableIntersect extends Intersect implements BindableRel {
+    public BindableIntersect(RelOptCluster cluster, RelTraitSet traitSet,
+        List<RelNode> inputs, boolean all) {
+      super(cluster, traitSet, inputs, all);
+    }
+
+    public BindableIntersect copy(RelTraitSet traitSet, List<RelNode> inputs,
+        boolean all) {
+      return new BindableIntersect(getCluster(), traitSet, inputs, all);
+    }
+
+    public Class<Object[]> getElementType() {
+      return Object[].class;
+    }
+
+    public Enumerable<Object[]> bind(DataContext dataContext) {
+      return help(dataContext, this);
+    }
+
+    public Node implement(InterpreterImplementor implementor) {
+      return new SetOpNode(implementor.compiler, this);
+    }
+  }
+
+  /** Implementation of {@link org.apache.calcite.rel.core.Minus} in
+   * bindable calling convention. */
+  public static class BindableMinus extends Minus implements BindableRel {
+    public BindableMinus(RelOptCluster cluster, RelTraitSet traitSet,
+                             List<RelNode> inputs, boolean all) {
+      super(cluster, traitSet, inputs, all);
+    }
+
+    public BindableMinus copy(RelTraitSet traitSet, List<RelNode> inputs,
+                              boolean all) {
+      return new BindableMinus(getCluster(), traitSet, inputs, all);
     }
 
     public Class<Object[]> getElementType() {
