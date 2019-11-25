@@ -191,7 +191,6 @@ import java.math.BigDecimal;
 import java.util.AbstractList;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -200,6 +199,7 @@ import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -5647,25 +5647,28 @@ public class SqlToRelConverter {
    * <p>Given a plan:
    *
    * <blockquote><pre>
-   * Filter Hint1
-   * +- Join
-   *    +- Scan
-   *    +- Project Hint2
-   *       +- Scan
+   *            Filter (Hint1)
+   *                |
+   *               Join
+   *              /    \
+   *            Scan  Project (Hint2)
+   *                     |
+   *                    Scan2
    * </pre></blockquote>
    *
    * <p>Every hint has a {@code inheritPath} (integers list) which records its propagate path,
-   * number `0` represents the hint is propagated from the first(left) child, number `1`
-   * represents the hint is propagated from the second(right) child, so the plan would have
-   * hints path as follows:
+   * number `0` represents the hint is propagated from the first(left) child,
+   * number `1` represents the hint is propagated from the second(right) child,
+   * so the plan would have hints path as follows
+   * (assumes each hint can be propagated to all child nodes):
    *
-   * <ol>
+   * <ul>
    *   <li>Filter would have hints {Hint1[]}</li>
    *   <li>Join would have hints {Hint1[0]}</li>
    *   <li>Scan would have hints {Hint1[0, 0]}</li>
-   *   <li>Project would have hints {Hint1[0,1], Hint2}</li>
+   *   <li>Project would have hints {Hint1[0,1], Hint2[]}</li>
    *   <li>Scan2 would have hints {[Hint1[0, 1, 0], Hint2[0]}</li>
-   * </ol>
+   * </ul>
    */
   private static class RelHintPropagateShuttle extends RelShuttleImpl {
     /**
@@ -5745,8 +5748,14 @@ public class SqlToRelConverter {
 
     private static List<RelHint> copyWithInheritPath(List<RelHint> hints,
         Deque<Integer> inheritPath) {
+      // Copy the Dequeue in reverse order.
+      final List<Integer> path = new ArrayList<>();
+      final Iterator<Integer> iterator = inheritPath.descendingIterator();
+      while (iterator.hasNext()) {
+        path.add(iterator.next());
+      }
       return hints.stream()
-          .map(hint -> hint.copy(Arrays.asList(inheritPath.toArray(new Integer[]{}))))
+          .map(hint -> hint.copy(path))
           .collect(Collectors.toList());
     }
   }
