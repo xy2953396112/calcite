@@ -2819,6 +2819,7 @@ public class MaterializationTest {
     checkNoMaterialize(sql0 + " union " + sql1, sql0 + " union all " + sql1,
         HR_FKUK_MODEL);
   }
+
   @Test public void testUnionOnCalcsToUnion() {
     String mv = ""
         + "select \"deptno\", \"salary\"\n"
@@ -2837,6 +2838,41 @@ public class MaterializationTest {
         + "from \"emps\"\n"
         + "where \"empid\" < 100 and \"salary\" > 100";
     checkMaterialize(mv, query);
+  }
+
+  @Test
+  public void testMvPredicate1() {
+    checkMaterialize(
+        "select \"deptno\", \"name\", \"empid\","
+            + "count(*) from \"emps\" group by  \"name\", \"deptno\", \"empid\" ",
+        "select \"name\", count(*) from \"emps\" where \"deptno\"= 10  group by \"name\" ", true);
+  }
+
+  @Test
+  public void testMvPredicate2() {
+    checkMaterialize(
+        "select \"deptno\", \"name\", \"empid\", count(*) from "
+            + "\"emps\" group by  \"name\", \"deptno\", \"empid\" ",
+        "select \"name\", count(*) from \"emps\" where "
+            + "\"name\"= 'Sebastian' OR \"name\"= 'Peter'  group by \"name\" ", true);
+  }
+
+  @Test
+  public void testMvPredicate3() {
+    checkMaterialize(
+        "select \"deptno\", \"name\", \"empid\", count(*) from "
+            + "\"emps\" group by  \"name\", \"deptno\", \"empid\" ",
+        "select \"name\", count(*) from \"emps\" where "
+            + "\"name\" = 'Sebastian' group by \"name\" ", true);
+  }
+
+  @Test
+  public void testMvPredicate4() {
+    checkMaterialize(
+        "select \"name\", \"deptno\", \"empid\", "
+            + "count(*) from \"emps\" group by \"name\", \"deptno\", \"empid\" ",
+        "select \"name\", count(*) from \"emps\" where \"name\"= "
+            + "'Sebastian' group by \"name\" ", true);
   }
 
   private static <E> List<List<List<E>>> list3(E[][][] as) {
