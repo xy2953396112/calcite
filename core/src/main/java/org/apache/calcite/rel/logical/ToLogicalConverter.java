@@ -26,14 +26,20 @@ import org.apache.calcite.rel.RelShuttleImpl;
 import org.apache.calcite.rel.SingleRel;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Calc;
+import org.apache.calcite.rel.core.Collect;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Intersect;
 import org.apache.calcite.rel.core.Join;
+import org.apache.calcite.rel.core.Match;
 import org.apache.calcite.rel.core.Minus;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.RepeatUnion;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.core.TableSpool;
 import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
@@ -172,6 +178,48 @@ public class ToLogicalConverter extends RelShuttleImpl {
       final RelNode input = visit(uncollect.getInput());
       return new Uncollect(input.getCluster(), input.getTraitSet(), input,
           uncollect.withOrdinality);
+    }
+
+    if (relNode instanceof Collect) {
+      final Collect collect = (Collect) relNode;
+      final RelNode input = visit(collect.getInput());
+      return new Collect(input.getCluster(), input.getTraitSet(), input,
+          collect.getFieldName());
+    }
+
+    if (relNode instanceof TableModify) {
+      final TableModify tableModify = (TableModify) relNode;
+      final RelNode input = visit(tableModify.getInput());
+      return new LogicalTableModify(tableModify.getCluster(), tableModify.getTraitSet(),
+          tableModify.getTable(), tableModify.getCatalogReader(), input,
+          tableModify.getOperation(), tableModify.getUpdateColumnList(),
+          tableModify.getSourceExpressionList(), tableModify.isFlattened());
+    }
+
+    if (relNode instanceof TableSpool) {
+      final TableSpool spool = (TableSpool) relNode;
+      return LogicalTableSpool.create(spool.getInput(), spool.readType,
+          spool.writeType, spool.getTable());
+    }
+
+    if (relNode instanceof RepeatUnion) {
+      final RepeatUnion repeatUnion = (RepeatUnion) relNode;
+      return LogicalRepeatUnion.create(repeatUnion.getSeedRel(), repeatUnion.getIterativeRel(),
+          repeatUnion.all);
+    }
+
+    if (relNode instanceof Match) {
+      final Match match = (Match) relNode;
+      return LogicalMatch.create(match.getCluster(), match.getTraitSet(), match.getInput(),
+          match.getRowType(), match.getPattern(), match.isStrictStart(), match.isStrictEnd(),
+          match.getPatternDefinitions(), match.getMeasures(), match.getAfter(), match.getSubsets(),
+          match.isAllRows(), match.getPartitionKeys(), match.getOrderKeys(), match.getInterval());
+    }
+
+    if (relNode instanceof TableFunctionScan) {
+      final TableFunctionScan scan = (TableFunctionScan) relNode;
+      return LogicalTableFunctionScan.create(scan.getCluster(), scan.getInputs(),
+          scan.getCall(), scan.getElementType(), scan.getRowType(), scan.getColumnMappings());
     }
 
     throw new AssertionError("Need to implement logical converter for "
