@@ -133,6 +133,7 @@ public class SubstitutionVisitor {
           JoinOnCalcsToJoinUnifyRule.INSTANCE,
           AggregateToAggregateUnifyRule.INSTANCE,
           AggregateOnCalcToAggregateUnifyRule.INSTANCE,
+          NothingToCalcUnifyRule.INSTANCE,
           UnionToUnionUnifyRule.INSTANCE,
           UnionOnCalcsToUnionUnifyRule.INSTANCE);
 
@@ -1070,6 +1071,70 @@ public class SubstitutionVisitor {
     }
   }
 
+  /**
+   * A {@link SubstitutionVisitor.UnifyRule} that matches a {@link MutableCalc}
+   * which has {@link MutableAggregate} as  child.
+   * We try to compensate the {@link MutableCalc},
+   * then match the query to the top of {@link MutableCalc} in target.
+   */
+  private static class NothingToCalcUnifyRule extends AbstractUnifyRule {
+
+    public static final NothingToCalcUnifyRule INSTANCE =
+        new NothingToCalcUnifyRule();
+
+    private NothingToCalcUnifyRule() {
+      super(any(MutableRel.class),
+          any(MutableCalc.class), 0);
+    }
+
+    public UnifyResult apply(UnifyRuleCall call) {
+      final MutableRel rel = call.query;
+      final MutableCalc target = (MutableCalc) call.target;
+      final MutableRel targetInput = target.getInput();
+      final Pair<RexNode, List<RexNode>> qInputExplained = explainCalc(target);
+      if (rel.getParent() != null || target.getParent() != null) {
+        return null;
+      }
+      final Mappings.TargetMapping mapping =
+          Project.getMapping(target.getInput().rowType.getFieldCount(), qInputExplained.right);
+      if (mapping == null || Mappings.keepsOrdering(mapping)) {
+        return null;
+      }
+      MutableRel equalRel = rel.getInputs().get(0);
+      while (equalRel != targetInput) {
+        if (equalRel instanceof MutableScan) {
+          return null;
+        }
+        equalRel = equalRel.getInputs().get(0);
+      }
+      MutableRel parent = equalRel.getParent();
+      final RexBuilder rexBuilder = call.getCluster().getRexBuilder();
+
+      List<RexNode> rexNodes = (List<RexNode>) rexBuilder.identityProjects(equalRel.rowType);
+      try {
+        RexShuttle shuttle = getRexShuttle(qInputExplained.right);
+        List<RexNode> compenProj = shuttle.apply(rexNodes);
+        RexProgram rexProgram = RexProgram.create(target.rowType, compenProj, null,
+            equalRel.rowType, rexBuilder);
+        MutableCalc newProj = MutableCalc.of(target, rexProgram);
+        parent.setInput(0, newProj);
+        if (equalRel.getParent() instanceof MutableCalc) {
+          MutableCalc topCalc = (MutableCalc) equalRel.getParent();
+          MutableCalc newCalc = mergeCalc(rexBuilder, topCalc, newProj);
+          if (topCalc.getParent() != null) {
+            topCalc.getParent().setInput(0, newCalc);
+          } else {
+            return call.result(newCalc);
+          }
+        } else {
+          equalRel.getParent().setInput(0, newProj);
+        }
+        return call.result(rel);
+      } catch (MatchFailed e) {
+        return null;
+      }
+    }
+  }
   /**
    * A {@link SubstitutionVisitor.UnifyRule} that matches a
    * {@link MutableCalc} to a {@link MutableCalc}.
