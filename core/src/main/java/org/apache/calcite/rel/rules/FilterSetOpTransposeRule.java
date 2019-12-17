@@ -65,6 +65,11 @@ public class FilterSetOpTransposeRule extends RelOptRule {
     Filter filterRel = call.rel(0);
     SetOp setOp = call.rel(1);
 
+    // cannot push filter past a distinct
+    if (!setOp.all) {
+      return;
+    }
+
     RexNode condition = filterRel.getCondition();
 
     // create filters on top of each setop child, modifying the filter
