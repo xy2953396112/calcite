@@ -112,10 +112,12 @@ import static org.apache.calcite.rex.RexUtil.removeAll;
  *
  * <p>The inputs must only include the core relational operators:
  * {@link org.apache.calcite.rel.core.TableScan},
- * {@link org.apache.calcite.rel.core.Filter},
- * {@link org.apache.calcite.rel.core.Project},
+ * {@link org.apache.calcite.rel.core.Calc},
  * {@link org.apache.calcite.rel.core.Join},
  * {@link org.apache.calcite.rel.core.Union},
+ * {@link org.apache.calcite.rel.core.Intersect},
+ * {@link org.apache.calcite.rel.core.Minus},
+ * {@link org.apache.calcite.rel.core.Sort},
  * {@link org.apache.calcite.rel.core.Aggregate}.</p>
  */
 public class SubstitutionVisitor {
