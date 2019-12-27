@@ -32,6 +32,7 @@ import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rel.logical.LogicalWindow;
 
 /**
  * Visitor that has methods for the common logical relational expressions.
@@ -68,6 +69,8 @@ public interface RelShuttle {
   RelNode visit(LogicalExchange exchange);
 
   RelNode visit(LogicalTableModify modify);
+
+  RelNode visit(LogicalWindow window);
 
   RelNode visit(RelNode other);
 }

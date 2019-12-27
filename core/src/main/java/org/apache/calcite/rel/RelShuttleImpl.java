@@ -33,6 +33,7 @@ import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rel.logical.LogicalWindow;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -135,6 +136,10 @@ public class RelShuttleImpl implements RelShuttle {
 
   public RelNode visit(LogicalTableModify modify) {
     return visitChildren(modify);
+  }
+
+  public RelNode visit(LogicalWindow window) {
+    return visitChildren(window);
   }
 
   public RelNode visit(RelNode other) {

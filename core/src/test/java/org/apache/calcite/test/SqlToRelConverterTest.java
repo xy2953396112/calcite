@@ -39,7 +39,9 @@ import org.apache.calcite.rel.logical.LogicalCalc;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalTableModify;
+import org.apache.calcite.rel.logical.LogicalWindow;
 import org.apache.calcite.rel.rules.ProjectToCalcRule;
+import org.apache.calcite.rel.rules.ProjectToWindowRule;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -2168,7 +2170,30 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     assertThat(rels.get(0), isA(LogicalTableModify.class));
   }
 
-  @Test void testOffset0() {
+  @Test public void testRelShuttleForLogicalWindow() {
+    final RelOptPlanner planner = tester.createPlanner();
+    planner.addRule(ProjectToWindowRule.INSTANCE);
+
+    final String sql = "select rank() over (order by empno) from emp";
+    final RelNode relNode = tester.convertSqlToRel(sql).rel;
+    planner.setRoot(relNode);
+    planner.addRule(ProjectToWindowRule.PROJECT);
+    final RelNode rel = planner.findBestExp();
+
+    final List<RelNode> rels = new ArrayList<>();
+    final RelShuttleImpl visitor = new RelShuttleImpl() {
+      @Override public RelNode visit(LogicalWindow window) {
+        RelNode visitedRel = super.visit(window);
+        rels.add(visitedRel);
+        return visitedRel;
+      }
+    };
+    visitor.visit(rel);
+    assertThat(rels.size(), is(1));
+    assertThat(rels.get(0), isA(LogicalWindow.class));
+  }
+
+  @Test public void testOffset0() {
     final String sql = "select * from emp offset 0";
     sql(sql).ok();
   }

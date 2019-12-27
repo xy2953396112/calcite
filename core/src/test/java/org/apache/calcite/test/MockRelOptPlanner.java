@@ -81,11 +81,10 @@ public class MockRelOptPlanner extends AbstractRelOptPlanner {
   }
 
   public boolean addRule(RelOptRule rule) {
-    assert this.rule == null
-        : "MockRelOptPlanner only supports a single rule";
+    // MockRelOptPlanner only supports a single rule
     this.rule = rule;
 
-    return false;
+    return true;
   }
 
   public boolean removeRule(RelOptRule rule) {
