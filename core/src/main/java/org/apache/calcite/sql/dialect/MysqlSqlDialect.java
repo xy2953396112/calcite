@@ -97,6 +97,7 @@ public class MysqlSqlDialect extends SqlDialect {
   @Override public boolean supportsAggregateFunction(SqlKind kind) {
     switch (kind) {
     case COUNT:
+    case AVG:
     case SUM:
     case SUM0:
     case MIN:

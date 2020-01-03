@@ -18,15 +18,7 @@ package org.apache.calcite.sql.dialect;
 
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDataTypeSpec;
-import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlSyntax;
-import org.apache.calcite.sql.SqlWriter;
+import org.apache.calcite.sql.*;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlSubstringFunction;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
@@ -71,6 +63,25 @@ public class HiveSqlDialect extends SqlDialect {
     }
 
     return null;
+  }
+
+  @Override public boolean supportsAggregateFunction(SqlKind kind) {
+    switch (kind) {
+    case COUNT:
+    case SUM:
+    case AVG:
+    case MIN:
+    case MAX:
+    case STDDEV_POP:
+    case STDDEV_SAMP:
+    case VAR_POP:
+    case VAR_SAMP:
+    case NTILE:
+      return true;
+    default:
+      break;
+    }
+    return false;
   }
 
   @Override public void unparseCall(final SqlWriter writer, final SqlCall call,
