@@ -16,10 +16,15 @@
  */
 package org.apache.calcite.test;
 
+import com.google.common.collect.Lists;
+
+import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.config.NullCollation;
 import org.apache.calcite.plan.Contexts;
+import org.apache.calcite.plan.RelOptMaterialization;
+import org.apache.calcite.plan.RelOptMaterializations;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTrait;
@@ -31,20 +36,36 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.RelShuttleImpl;
 import org.apache.calcite.rel.RelVisitor;
 import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.externalize.RelXmlWriter;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalTableModify;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.Schema.TableType;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Statistic;
+import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlExplainLevel;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.calcite.sql.validate.SqlDelegatingConformance;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.test.catalog.MockCatalogReaderExtended;
+import org.apache.calcite.tools.Frameworks;
+import org.apache.calcite.tools.Programs;
+import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.Bug;
 import org.apache.calcite.util.Litmus;
+import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.TestUtil;
 import org.apache.calcite.util.Util;
 
@@ -3750,6 +3771,40 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     assertThat(parameters.size(), is(2));
     assertThat(parameters.get(0).getType().getSqlTypeName(), is(SqlTypeName.INTEGER));
     assertThat(parameters.get(1).getType().getSqlTypeName(), is(SqlTypeName.VARCHAR));
+  }
+
+  public static Frameworks.ConfigBuilder config() {
+    final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
+    rootSchema.add("mv0", new AbstractTable() {
+      @Override
+      public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+        return typeFactory.builder()
+            .add("empno", SqlTypeName.INTEGER)
+            .add("num", SqlTypeName.INTEGER)
+            .build();
+      }
+    });
+    return Frameworks.newConfigBuilder()
+        .parserConfig(SqlParser.Config.DEFAULT)
+        .defaultSchema(rootSchema)
+        .traitDefs((List<RelTraitDef>) null)
+        .programs(Programs.heuristicJoinOrder(Programs.RULE_SET, true, 2));
+  }
+
+  @Test void testLateraltable() {
+    RelNode mv = tester.convertSqlToRel("select empno, r.num from emp, lateral table(ramp(emp.deptno)) as r(num)").rel;
+
+    final RelBuilder builder = RelBuilder.create(config().build());
+    RelNode replacement = builder.scan("mv0").build();
+
+    RelNode query = tester.convertSqlToRel("select empno, r.num from emp, lateral table(ramp(emp.deptno)) as r(num) where empno > 0").rel;
+
+    RelOptMaterialization relOptMaterialization = new RelOptMaterialization(replacement, mv,
+        null, Lists.newArrayList("mv0"));
+
+    List<Pair<RelNode, List<RelOptMaterialization>>> relOptimized= RelOptMaterializations.useMaterializedViews(query, ImmutableList.of(relOptMaterialization));
+
+    System.out.println(RelOptUtil.toString(relOptimized.get(0).left));
   }
 
   /**

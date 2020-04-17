@@ -2865,6 +2865,7 @@ class MaterializationTest {
         {{"hr", "m1"}, {"hr", "m0"}},
         {{"hr", "m1"}, {"hr", "m1"}}};
 
+
     try (TryThreadLocal.Memo ignored = Prepare.THREAD_TRIM.push(true)) {
       MaterializationService.setThreadLocal();
       final List<List<List<String>>> substitutedNames = new ArrayList<>();
@@ -3029,6 +3030,29 @@ class MaterializationTest {
         + "intersect all\n"
         + "select \"name\",\"deptno\" from \"emps\"";
     sql(mv, query).withOnlyBySubstitution(true).ok();
+  }
+
+  @Test void testLogicalCorrelate() {
+      final String mv = ""
+          + "select \"deptno\",\"name\" from \"emps\" \"a\" where \"deptno\" in ("
+          + "select \"deptno\" from \"depts\" where \"depts\".\"deptno\" = \"a\".\"deptno\")\n";
+
+      final String query = ""
+          + "select \"deptno\",\"name\" from \"emps\" \"a\" where \"name\" is not null and \"deptno\" in ("
+          + "select \"deptno\" from \"depts\" where \"depts\".\"deptno\" = \"a\".\"deptno\")\n";
+      sql(mv, query).withOnlyBySubstitution(true).ok();
+
+  }
+
+  @Test void testLateralTable() {
+    final String query = "select * \n"
+        + "from \"emps\", lateral table(\"min\"(\"emps\".\"deptno\")) as \"t\"(\"col0\")\n"
+        + "where \"deptno\" > \"10\"";
+
+    final String mv = "select * \n"
+        + "from \"emps\", lateral table(\"min\"(\"emps\".\"deptno\")) as \"t\"(\"col0\")\n";
+    sql(mv, query).withOnlyBySubstitution(true).ok();
+
   }
 
   private static <E> List<List<List<E>>> list3(E[][][] as) {

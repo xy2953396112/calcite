@@ -354,6 +354,34 @@ public class RelBuilderTest {
     }
   }
 
+
+  @Test void testCorrelateMVMatch() {
+    final RelBuilder builder = RelBuilder.create(config().build());
+
+    final SqlOperator rampFunction = new MockSqlOperatorTable.RampFunction();
+    RelNode root1 = builder.functionScan(rampFunction, 0, builder.literal("emp.empno"))
+        .build();
+
+
+
+    final Holder<RexCorrelVariable> v = Holder.of(null);
+    RelNode root = builder.scan("EMP")
+        .variable(v)
+        .scan("DEPT")
+        .filter(
+            builder.equals(builder.field(0),
+                builder.field(v.get(), "DEPTNO")))
+        .correlate(JoinRelType.LEFT, v.get().id, builder.field(2, 0, "DEPTNO"))
+        .build();
+
+    final String expected = ""
+        + "LogicalCorrelate(correlation=[$cor0], joinType=[left], requiredColumns=[{7}])\n"
+        + "  LogicalTableScan(table=[[scott, EMP]])\n"
+        + "  LogicalFilter(condition=[=($0, $cor0.DEPTNO)])\n"
+        + "    LogicalTableScan(table=[[scott, DEPT]])\n";
+    assertThat(root, hasTree(expected));
+  }
+
   @Test void testTableFunctionScanZeroInputs() {
     // Equivalent SQL:
     //   SELECT *
@@ -3294,6 +3322,8 @@ public class RelBuilderTest {
         + "    LogicalTableScan(table=[[scott, DEPT]])\n";
     assertThat(root, hasTree(expected));
   }
+
+
 
   @Test void testCorrelateWithComplexFields() {
     final RelBuilder builder = RelBuilder.create(config().build());

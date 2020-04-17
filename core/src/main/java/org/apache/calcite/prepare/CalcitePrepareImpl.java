@@ -84,9 +84,12 @@ import org.apache.calcite.sql.SqlBinaryOperator;
 import org.apache.calcite.sql.SqlExecutableStatement;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -94,8 +97,10 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.parser.SqlParserImplFactory;
 import org.apache.calcite.sql.type.ExtraSqlTypes;
+import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.ChainedSqlOperatorTable;
+import org.apache.calcite.sql.util.ListSqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
@@ -699,11 +704,31 @@ public class CalcitePrepareImpl implements CalcitePrepare {
         statementType);
   }
 
+  /** "RAMP" user-defined function. */
+  public static class RampFunction extends SqlFunction {
+    public RampFunction() {
+      super("RAMP",
+          SqlKind.OTHER_FUNCTION,
+          null,
+          null,
+          OperandTypes.NUMERIC,
+          SqlFunctionCategory.USER_DEFINED_FUNCTION);
+    }
+
+    public RelDataType inferReturnType(SqlOperatorBinding opBinding) {
+      final RelDataTypeFactory typeFactory =
+          opBinding.getTypeFactory();
+      return typeFactory.builder()
+          .add("I", SqlTypeName.INTEGER)
+          .build();
+    }
+  }
+
   private SqlValidator createSqlValidator(Context context,
       CalciteCatalogReader catalogReader) {
+    SqlStdOperatorTable.instance().register(new RampFunction());
     final SqlOperatorTable opTab0 =
-        context.config().fun(SqlOperatorTable.class,
-            SqlStdOperatorTable.instance());
+        context.config().fun(SqlOperatorTable.class, SqlStdOperatorTable.instance());
     final SqlOperatorTable opTab =
         ChainedSqlOperatorTable.of(opTab0, catalogReader);
     final JavaTypeFactory typeFactory = context.getTypeFactory();

@@ -139,6 +139,15 @@ public class MockCatalogReaderExtended extends MockCatalogReaderSimple {
     registerTable(virtualColumnsTable1);
     registerTable(virtualColumnsTable2);
 
+    // Same schema with VC_T1 but with different table name.
+    final MockTable mv0 =
+        MockTable.create(this, virtualColumnsSchema, "mv0", false, 100,
+            null, new VirtualColumnsExpressionFactory(), false);
+    mv0.addColumn("empno", f.intType);
+    mv0.addColumn("num", f.intType);
+    registerTable(mv0);
+
+
     // Register table with complex data type rows.
     MockSchema complexTypeColumnsSchema = new MockSchema("COMPLEXTYPES");
     registerSchema(complexTypeColumnsSchema);
