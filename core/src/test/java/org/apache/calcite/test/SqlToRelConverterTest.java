@@ -3784,6 +3784,16 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
             .build();
       }
     });
+    rootSchema.add("mv1", new AbstractTable() {
+      @Override
+      public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+        return typeFactory.builder()
+            .add("empno", SqlTypeName.INTEGER)
+            .add("ename", SqlTypeName.VARCHAR)
+            .add("num", SqlTypeName.INTEGER)
+            .build();
+      }
+    });
     return Frameworks.newConfigBuilder()
         .parserConfig(SqlParser.Config.DEFAULT)
         .defaultSchema(rootSchema)
@@ -3791,7 +3801,7 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
         .programs(Programs.heuristicJoinOrder(Programs.RULE_SET, true, 2));
   }
 
-  @Test void testLateraltable() {
+  @Test void testLateraltableFilter() {
     RelNode mv = tester.convertSqlToRel("select empno, r.num from emp, lateral table(ramp(emp.deptno)) as r(num)").rel;
 
     final RelBuilder builder = RelBuilder.create(config().build());
@@ -3801,6 +3811,54 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
 
     RelOptMaterialization relOptMaterialization = new RelOptMaterialization(replacement, mv,
         null, Lists.newArrayList("mv0"));
+
+    List<Pair<RelNode, List<RelOptMaterialization>>> relOptimized= RelOptMaterializations.useMaterializedViews(query, ImmutableList.of(relOptMaterialization));
+
+    System.out.println(RelOptUtil.toString(relOptimized.get(0).left));
+  }
+
+  @Test void testLateraltableProject() {
+    RelNode mv = tester.convertSqlToRel("select empno, ename, r.num from emp, lateral table(ramp(emp.deptno)) as r(num)").rel;
+
+    final RelBuilder builder = RelBuilder.create(config().build());
+    RelNode replacement = builder.scan("mv1").build();
+
+    RelNode query = tester.convertSqlToRel("select empno, r.num from emp, lateral table(ramp(emp.deptno)) as r(num)").rel;
+
+    RelOptMaterialization relOptMaterialization = new RelOptMaterialization(replacement, mv,
+        null, Lists.newArrayList("mv1"));
+
+    List<Pair<RelNode, List<RelOptMaterialization>>> relOptimized= RelOptMaterializations.useMaterializedViews(query, ImmutableList.of(relOptMaterialization));
+
+    System.out.println(RelOptUtil.toString(relOptimized.get(0).left));
+  }
+
+  @Test void testLateraltableProjectFilter() {
+    RelNode mv = tester.convertSqlToRel("select empno, ename, r.num from emp, lateral table(ramp(emp.deptno)) as r(num)").rel;
+
+    final RelBuilder builder = RelBuilder.create(config().build());
+    RelNode replacement = builder.scan("mv1").build();
+
+    RelNode query = tester.convertSqlToRel("select empno, r.num from emp, lateral table(ramp(emp.deptno)) as r(num) where empno > 0").rel;
+
+    RelOptMaterialization relOptMaterialization = new RelOptMaterialization(replacement, mv,
+        null, Lists.newArrayList("mv1"));
+
+    List<Pair<RelNode, List<RelOptMaterialization>>> relOptimized= RelOptMaterializations.useMaterializedViews(query, ImmutableList.of(relOptMaterialization));
+
+    System.out.println(RelOptUtil.toString(relOptimized.get(0).left));
+  }
+
+  @Test void testLateraltableProjectFilterJoin() {
+    RelNode mv = tester.convertSqlToRel("select empno, ename, r.num from emp join lateral table(ramp(emp.deptno)) as r(num) on emp.deptno = num").rel;
+
+    final RelBuilder builder = RelBuilder.create(config().build());
+    RelNode replacement = builder.scan("mv1").build();
+
+    RelNode query = tester.convertSqlToRel("select empno, r.num from emp join lateral table(ramp(emp.deptno)) as r(num) on emp.deptno = num where empno > 0 ").rel;
+
+    RelOptMaterialization relOptMaterialization = new RelOptMaterialization(replacement, mv,
+        null, Lists.newArrayList("mv1"));
 
     List<Pair<RelNode, List<RelOptMaterialization>>> relOptimized= RelOptMaterializations.useMaterializedViews(query, ImmutableList.of(relOptMaterialization));
 

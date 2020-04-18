@@ -1213,11 +1213,20 @@ public class SubstitutionVisitor {
 
       ImmutableBitSet queryRequiredColumns = query.requiredColumns;
       ImmutableBitSet targetRequiredColumns = target.requiredColumns;
-      if (queryRequiredColumns.compareTo(targetRequiredColumns) != 0) {
+      if (queryRequiredColumns.cardinality() != targetRequiredColumns.cardinality()) {
         return null;
       }
+      for (int i = 0; i < queryRequiredColumns.cardinality(); i++) {
+        String queryRequiredColumn = query.rowType.getFieldList().get(i).getName();
+        String targetRequiredColumn = target.rowType.getFieldList().get(i).getName();
+        if (!queryRequiredColumn.equalsIgnoreCase(targetRequiredColumn)) {
+          return null;
+        }
+      }
 
+      // compensate condition
       final RexNode compenCond = qInput0Cond;
+      // compensate project
       final List<RexNode> compenProjs = new ArrayList<>();
       for (int i = 0; i < fieldCnt(query); i++) {
         if (i < fieldCnt(qInput0)) {
