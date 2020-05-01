@@ -3031,6 +3031,24 @@ class MaterializationTest {
     sql(mv, query).withOnlyBySubstitution(true).ok();
   }
 
+
+  @Test void test() {
+    final String query = ""
+        + "select \"deptno\", count(1)\n"
+        + "from (select distinct \"empid\", \"deptno\", \"name\",\n"
+        + "\"salary\", \"commission\"\n"
+        + "from \"emps\")\n"
+        + "where \"deptno\" = 10\n"
+        + "group by \"deptno\"";
+    final String target = ""
+        + "select \"deptno\", sum(\"salary\"), count(1)\n"
+        + "from (select distinct \"empid\", \"deptno\", \"name\",\n"
+        + "\"salary\", \"commission\"\n"
+        + "from \"emps\")\n"
+        + "group by \"deptno\"";
+    sql(target, query).withOnlyBySubstitution(true).ok();
+  }
+
   private static <E> List<List<List<E>>> list3(E[][][] as) {
     final ImmutableList.Builder<List<List<E>>> builder =
         ImmutableList.builder();
