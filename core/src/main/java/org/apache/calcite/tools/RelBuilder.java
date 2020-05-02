@@ -51,6 +51,8 @@ import org.apache.calcite.rel.core.Snapshot;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Spool;
 import org.apache.calcite.rel.core.TableFunctionScan;
+import org.apache.calcite.rel.core.TableModify;
+import org.apache.calcite.rel.core.TableModify.Operation;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.TableSpool;
 import org.apache.calcite.rel.core.Uncollect;
@@ -1116,6 +1118,19 @@ public class RelBuilder {
     final RelNode input = peek(inputCount, ordinal);
     return call(SqlStdOperatorTable.CURSOR,
         getRexBuilder().makeInputRef(input.getRowType(), ordinal));
+  }
+
+  /** Creates a {@link TableModify}. */
+  public RelBuilder tableModify(SqlOperator operator,
+      int inputCount, RexNode... operands) {
+    return functionScan(operator, inputCount, ImmutableList.copyOf(operands));
+  }
+
+  public RelBuilder tableModify1(RelOptTable table, Operation operation) {
+    RelNode input = build();
+    input.getCluster().get
+    final RelNode functionScan =
+        struct.tableModifyFactory.createTableModify(table, relOptSchema, build(), operation, null, null, false);
   }
 
   /** Creates a {@link TableFunctionScan}. */

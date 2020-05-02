@@ -22,9 +22,12 @@ import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.prepare.Prepare.CatalogReader;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.TableModify.Operation;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
@@ -40,6 +43,7 @@ import org.apache.calcite.rel.logical.LogicalSnapshot;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalSortExchange;
 import org.apache.calcite.rel.logical.LogicalTableFunctionScan;
+import org.apache.calcite.rel.logical.LogicalTableModify;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.logical.LogicalTableSpool;
 import org.apache.calcite.rel.logical.LogicalUnion;
@@ -108,6 +112,9 @@ public class RelFactories {
   public static final TableFunctionScanFactory
       DEFAULT_TABLE_FUNCTION_SCAN_FACTORY = new TableFunctionScanFactoryImpl();
 
+  public static final TableModifyFactory
+      DEFAULT_TABLE_MODIFY_FACTORY = new TableModifyFactoryImpl();
+
   public static final SnapshotFactory DEFAULT_SNAPSHOT_FACTORY =
       new SnapshotFactoryImpl();
 
@@ -130,6 +137,7 @@ public class RelFactories {
           DEFAULT_VALUES_FACTORY,
           DEFAULT_TABLE_SCAN_FACTORY,
           DEFAULT_TABLE_FUNCTION_SCAN_FACTORY,
+          DEFAULT_TABLE_MODIFY_FACTORY,
           DEFAULT_SNAPSHOT_FACTORY,
           DEFAULT_MATCH_FACTORY,
           DEFAULT_SPOOL_FACTORY,
@@ -503,6 +511,18 @@ public class RelFactories {
   }
 
   /**
+   * Can create a {@link TableModify}
+   * of the appropriate type for a rule's calling convention.
+   */
+  public interface TableModifyFactory {
+    /** Creates a {@link TableModify}. */
+    RelNode createTableModify(RelOptTable table,
+        Prepare.CatalogReader schema, RelNode input,
+        Operation operation, List<String> updateColumnList,
+        List<RexNode> sourceExpressionList, boolean flattened);
+  }
+
+  /**
    * Implementation of
    * {@link TableFunctionScanFactory}
    * that returns a {@link TableFunctionScan}.
@@ -514,6 +534,25 @@ public class RelFactories {
         Set<RelColumnMapping> columnMappings) {
       return LogicalTableFunctionScan.create(cluster, inputs, rexCall,
           elementType, rexCall.getType(), columnMappings);
+    }
+  }
+
+  /**
+   * Implementation of
+   * {@link TableModifyFactory}
+   * that returns a {@link TableModify}.
+   */
+  private static class TableModifyFactoryImpl
+      implements TableModifyFactory {
+
+    @Override
+    public RelNode createTableModify(RelOptTable table,
+        CatalogReader schema, RelNode input,
+        Operation operation, List<String> updateColumnList,
+        List<RexNode> sourceExpressionList, boolean flattened) {
+      return LogicalTableModify
+          .create(table, schema, input, operation, updateColumnList, sourceExpressionList,
+              flattened);
     }
   }
 
@@ -627,6 +666,7 @@ public class RelFactories {
     public final ValuesFactory valuesFactory;
     public final TableScanFactory scanFactory;
     public final TableFunctionScanFactory tableFunctionScanFactory;
+    public final TableModifyFactory tableModifyFactory;
     public final SnapshotFactory snapshotFactory;
     public final MatchFactory matchFactory;
     public final SpoolFactory spoolFactory;
@@ -644,6 +684,7 @@ public class RelFactories {
         ValuesFactory valuesFactory,
         TableScanFactory scanFactory,
         TableFunctionScanFactory tableFunctionScanFactory,
+        TableModifyFactory tableModifyFactory,
         SnapshotFactory snapshotFactory,
         MatchFactory matchFactory,
         SpoolFactory spoolFactory,
@@ -661,6 +702,8 @@ public class RelFactories {
       this.scanFactory = Objects.requireNonNull(scanFactory);
       this.tableFunctionScanFactory =
           Objects.requireNonNull(tableFunctionScanFactory);
+      this.tableModifyFactory =
+          Objects.requireNonNull(tableModifyFactory);
       this.snapshotFactory = Objects.requireNonNull(snapshotFactory);
       this.matchFactory = Objects.requireNonNull(matchFactory);
       this.spoolFactory = Objects.requireNonNull(spoolFactory);
@@ -697,6 +740,8 @@ public class RelFactories {
               DEFAULT_TABLE_SCAN_FACTORY),
           Util.first(context.unwrap(TableFunctionScanFactory.class),
               DEFAULT_TABLE_FUNCTION_SCAN_FACTORY),
+          Util.first(context.unwrap(TableModifyFactory.class),
+              DEFAULT_TABLE_MODIFY_FACTORY),
           Util.first(context.unwrap(SnapshotFactory.class),
               DEFAULT_SNAPSHOT_FACTORY),
           Util.first(context.unwrap(MatchFactory.class),
