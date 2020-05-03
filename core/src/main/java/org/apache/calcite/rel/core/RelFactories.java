@@ -27,6 +27,7 @@ import org.apache.calcite.rel.RelDistribution;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.logical.LogicalAggregate;
+import org.apache.calcite.rel.logical.LogicalCalc;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalExchange;
 import org.apache.calcite.rel.logical.LogicalFilter;
@@ -48,6 +49,7 @@ import org.apache.calcite.rel.metadata.RelColumnMapping;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexProgram;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
@@ -75,6 +77,9 @@ public class RelFactories {
 
   public static final FilterFactory DEFAULT_FILTER_FACTORY =
       new FilterFactoryImpl();
+
+  public static final CalcFactory DEFAULT_CALC_FACTORY =
+      new CalcFactoryImpl();
 
   public static final JoinFactory DEFAULT_JOIN_FACTORY = new JoinFactoryImpl();
 
@@ -120,6 +125,7 @@ public class RelFactories {
   public static final Struct DEFAULT_STRUCT =
       new Struct(DEFAULT_FILTER_FACTORY,
           DEFAULT_PROJECT_FACTORY,
+          DEFAULT_CALC_FACTORY,
           DEFAULT_AGGREGATE_FACTORY,
           DEFAULT_SORT_FACTORY,
           DEFAULT_EXCHANGE_FACTORY,
@@ -338,6 +344,31 @@ public class RelFactories {
         Set<CorrelationId> variablesSet) {
       return LogicalFilter.create(input, condition,
           ImmutableSet.copyOf(variablesSet));
+    }
+  }
+
+  /**
+   * Can create a {@link Calc} of the appropriate type
+   * for this rule's calling convention.
+   */
+  public interface CalcFactory {
+
+    /** Create a Calc.
+     *
+     * @param input Input relational expression
+     * @param rexProgram Calc program
+     */
+    RelNode createCalc(RelNode input, RexProgram rexProgram);
+
+  }
+
+  /**
+   * Implementation of {@link RelFactories.CalcFactory} that
+   * returns a vanilla {@link LogicalCalc}.
+   */
+  private static class CalcFactoryImpl implements CalcFactory {
+    public RelNode createCalc(RelNode input, RexProgram rexProgram) {
+      return LogicalCalc.create(input, rexProgram);
     }
   }
 
@@ -617,6 +648,7 @@ public class RelFactories {
   public static class Struct {
     public final FilterFactory filterFactory;
     public final ProjectFactory projectFactory;
+    public final CalcFactory calcFactory;
     public final AggregateFactory aggregateFactory;
     public final SortFactory sortFactory;
     public final ExchangeFactory exchangeFactory;
@@ -634,6 +666,7 @@ public class RelFactories {
 
     private Struct(FilterFactory filterFactory,
         ProjectFactory projectFactory,
+        CalcFactory calcFactory,
         AggregateFactory aggregateFactory,
         SortFactory sortFactory,
         ExchangeFactory exchangeFactory,
@@ -650,6 +683,7 @@ public class RelFactories {
         RepeatUnionFactory repeatUnionFactory) {
       this.filterFactory = Objects.requireNonNull(filterFactory);
       this.projectFactory = Objects.requireNonNull(projectFactory);
+      this.calcFactory = Objects.requireNonNull(calcFactory);
       this.aggregateFactory = Objects.requireNonNull(aggregateFactory);
       this.sortFactory = Objects.requireNonNull(sortFactory);
       this.exchangeFactory = Objects.requireNonNull(exchangeFactory);
@@ -677,6 +711,8 @@ public class RelFactories {
               DEFAULT_FILTER_FACTORY),
           Util.first(context.unwrap(ProjectFactory.class),
               DEFAULT_PROJECT_FACTORY),
+          Util.first(context.unwrap(CalcFactory.class),
+              DEFAULT_CALC_FACTORY),
           Util.first(context.unwrap(AggregateFactory.class),
               DEFAULT_AGGREGATE_FACTORY),
           Util.first(context.unwrap(SortFactory.class),

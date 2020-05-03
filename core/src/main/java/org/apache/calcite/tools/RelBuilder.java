@@ -18,6 +18,7 @@ package org.apache.calcite.tools;
 
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.function.Experimental;
+import org.apache.calcite.linq4j.tree.Shuttle;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.Convention;
@@ -36,6 +37,7 @@ import org.apache.calcite.rel.RelHomogeneousShuttle;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Calc;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Filter;
@@ -58,6 +60,7 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.hint.Hintable;
 import org.apache.calcite.rel.hint.RelHint;
+import org.apache.calcite.rel.logical.LogicalCalc;
 import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.metadata.RelColumnMapping;
@@ -72,7 +75,10 @@ import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexLocalRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexProgram;
+import org.apache.calcite.rex.RexProgramBuilder;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexSimplify;
 import org.apache.calcite.rex.RexUtil;
@@ -1200,6 +1206,45 @@ public class RelBuilder {
     }
     return this;
   }
+
+  /** Creates a {@link Calc} of the given
+   * expressions. */
+  public RelBuilder calc(Iterable<? extends RexNode> predicates, Iterable<? extends RexNode> projs) {
+    RelNode input = build();
+    final RexNode simplifiedPredicates =
+        simplifier.simplifyFilterPredicates(predicates);
+    RexProgram rexProgram = RexProgram.create(input.getRowType(), projs, simplifiedPredicates,);
+    List<Pair<RexLocalRef, String>> list = rexProgram.getNamedProjects();
+
+    LogicalCalc calc = LogicalCalc.create(input, rexProgram);
+    RexShuttle rexShuttle = new RexShuttle() {
+      @Override public RexNode visitLocalRef(RexLocalRef localRef) {
+        return rexProgram.expandLocalRef(localRef);
+      }
+    };
+    final List<RexNode> projects = new ArrayList<>();
+    for (RexNode rex: rexShuttle.apply(rexProgram.getProjectList())) {
+      projects.add(rex);
+    }
+
+    for (Pair<RexNode, Field> pair
+        : Pair.zip(projects, frame1.fields)) {
+      switch (pair.left.getKind()) {
+      case INPUT_REF:
+        final int i = ((RexInputRef) pair.left).getIndex();
+        final Field field = fields.get(i);
+        final ImmutableSet<String> aliases = pair.right.left;
+        fields.set(i, new Field(aliases, field.right));
+        break;
+      }
+    }
+    stack.push(new Frame(project.getInput(), ImmutableList.copyOf(fields)));
+
+
+    stack.push(new Frame(calc, calc.getRowType().));
+    return project(ImmutableList.copyOf(nodes));
+  }
+
 
   /** Creates a {@link Project} of the given
    * expressions. */
