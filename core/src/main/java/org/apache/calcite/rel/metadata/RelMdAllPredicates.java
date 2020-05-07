@@ -22,6 +22,7 @@ import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
+import org.apache.calcite.rel.core.Calc;
 import org.apache.calcite.rel.core.Exchange;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
@@ -120,6 +121,47 @@ public class RelMdAllPredicates
    * Add the Filter condition to the list obtained from the input.
    */
   public RelOptPredicateList getAllPredicates(Filter filter, RelMetadataQuery mq) {
+    final RelNode input = filter.getInput();
+    final RexBuilder rexBuilder = filter.getCluster().getRexBuilder();
+    final RexNode pred = filter.getCondition();
+
+    final RelOptPredicateList predsBelow = mq.getAllPredicates(input);
+    if (predsBelow == null) {
+      // Safety check
+      return null;
+    }
+
+    // Extract input fields referenced by Filter condition
+    final Set<RelDataTypeField> inputExtraFields = new LinkedHashSet<>();
+    final RelOptUtil.InputFinder inputFinder = new RelOptUtil.InputFinder(inputExtraFields);
+    pred.accept(inputFinder);
+    final ImmutableBitSet inputFieldsUsed = inputFinder.inputBitSet.build();
+
+    // Infer column origin expressions for given references
+    final Map<RexInputRef, Set<RexNode>> mapping = new LinkedHashMap<>();
+    for (int idx : inputFieldsUsed) {
+      final RexInputRef ref = RexInputRef.of(idx, filter.getRowType().getFieldList());
+      final Set<RexNode> originalExprs = mq.getExpressionLineage(filter, ref);
+      if (originalExprs == null) {
+        // Bail out
+        return null;
+      }
+      mapping.put(ref, originalExprs);
+    }
+
+    // Replace with new expressions and return union of predicates
+    final Set<RexNode> allExprs =
+        RelMdExpressionLineage.createAllPossibleExpressions(rexBuilder, pred, mapping);
+    if (allExprs == null) {
+      return null;
+    }
+    return predsBelow.union(rexBuilder, RelOptPredicateList.of(rexBuilder, allExprs));
+  }
+
+  /**
+   * Add the Filter condition to the list obtained from the input.
+   */
+  public RelOptPredicateList getAllPredicates(Calc filter, RelMetadataQuery mq) {
     final RelNode input = filter.getInput();
     final RexBuilder rexBuilder = filter.getCluster().getRexBuilder();
     final RexNode pred = filter.getCondition();
