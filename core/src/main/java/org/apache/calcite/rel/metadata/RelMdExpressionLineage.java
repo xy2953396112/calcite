@@ -21,6 +21,7 @@ import org.apache.calcite.plan.hep.HepRelVertex;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
+import org.apache.calcite.rel.core.Calc;
 import org.apache.calcite.rel.core.Exchange;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
@@ -351,6 +352,34 @@ public class RelMdExpressionLineage
    * Expression lineage from Project.
    */
   public Set<RexNode> getExpressionLineage(Project rel,
+      final RelMetadataQuery mq, RexNode outputExpression) {
+    final RelNode input = rel.getInput();
+    final RexBuilder rexBuilder = rel.getCluster().getRexBuilder();
+
+    // Extract input fields referenced by expression
+    final ImmutableBitSet inputFieldsUsed = extractInputRefs(outputExpression);
+
+    // Infer column origin expressions for given references
+    final Map<RexInputRef, Set<RexNode>> mapping = new LinkedHashMap<>();
+    for (int idx : inputFieldsUsed) {
+      final RexNode inputExpr = rel.getChildExps().get(idx);
+      final Set<RexNode> originalExprs = mq.getExpressionLineage(input, inputExpr);
+      if (originalExprs == null) {
+        // Bail out
+        return null;
+      }
+      final RexInputRef ref = RexInputRef.of(idx, rel.getRowType().getFieldList());
+      mapping.put(ref, originalExprs);
+    }
+
+    // Return result
+    return createAllPossibleExpressions(rexBuilder, outputExpression, mapping);
+  }
+
+  /**
+   * Expression lineage from Calc.
+   */
+  public Set<RexNode> getExpressionLineage(Calc rel,
       final RelMetadataQuery mq, RexNode outputExpression) {
     final RelNode input = rel.getInput();
     final RexBuilder rexBuilder = rel.getCluster().getRexBuilder();
