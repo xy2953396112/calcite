@@ -26,6 +26,7 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Calc;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
@@ -451,6 +452,58 @@ public class RelFieldTrimmer implements ReflectiveVisitor {
       ImmutableBitSet fieldsUsed,
       Set<RelDataTypeField> extraFields) {
     final RelDataType rowType = filter.getRowType();
+    final int fieldCount = rowType.getFieldCount();
+    final RexNode conditionExpr = filter.getCondition();
+    final RelNode input = filter.getInput();
+
+    // We use the fields used by the consumer, plus any fields used in the
+    // filter.
+    final Set<RelDataTypeField> inputExtraFields =
+        new LinkedHashSet<>(extraFields);
+    RelOptUtil.InputFinder inputFinder =
+        new RelOptUtil.InputFinder(inputExtraFields);
+    inputFinder.inputBitSet.addAll(fieldsUsed);
+    conditionExpr.accept(inputFinder);
+    final ImmutableBitSet inputFieldsUsed = inputFinder.inputBitSet.build();
+
+    // Create input with trimmed columns.
+    TrimResult trimResult =
+        trimChild(filter, input, inputFieldsUsed, inputExtraFields);
+    RelNode newInput = trimResult.left;
+    final Mapping inputMapping = trimResult.right;
+
+    // If the input is unchanged, and we need to project all columns,
+    // there's nothing we can do.
+    if (newInput == input
+        && fieldsUsed.cardinality() == fieldCount) {
+      return result(filter, Mappings.createIdentity(fieldCount));
+    }
+
+    // Build new project expressions, and populate the mapping.
+    final RexVisitor<RexNode> shuttle =
+        new RexPermuteInputsShuttle(inputMapping, newInput);
+    RexNode newConditionExpr =
+        conditionExpr.accept(shuttle);
+
+    // Build new filter with trimmed input and condition.
+    relBuilder.push(newInput)
+        .filter(filter.getVariablesSet(), newConditionExpr);
+
+    // The result has the same mapping as the input gave us. Sometimes we
+    // return fields that the consumer didn't ask for, because the filter
+    // needs them for its condition.
+    return result(relBuilder.build(), inputMapping);
+  }
+
+  /**
+   * Variant of {@link #trimFields(RelNode, ImmutableBitSet, Set)} for
+   * {@link org.apache.calcite.rel.logical.LogicalFilter}.
+   */
+  public TrimResult trimFields(
+      Calc calc,
+      ImmutableBitSet fieldsUsed,
+      Set<RelDataTypeField> extraFields) {
+    final RelDataType rowType = calc.getRowType();
     final int fieldCount = rowType.getFieldCount();
     final RexNode conditionExpr = filter.getCondition();
     final RelNode input = filter.getInput();
