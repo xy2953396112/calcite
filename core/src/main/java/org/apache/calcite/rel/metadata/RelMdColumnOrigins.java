@@ -21,12 +21,14 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Calc;
+import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.Exchange;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.SetOp;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.SortExchange;
 import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rex.RexInputRef;
@@ -87,6 +89,30 @@ public class RelMdColumnOrigins
   }
 
   public Set<RelColumnOrigin> getColumnOrigins(Join rel, RelMetadataQuery mq,
+      int iOutputColumn) {
+    int nLeftColumns = rel.getLeft().getRowType().getFieldList().size();
+    Set<RelColumnOrigin> set;
+    boolean derived = false;
+    if (iOutputColumn < nLeftColumns) {
+      set = mq.getColumnOrigins(rel.getLeft(), iOutputColumn);
+      if (rel.getJoinType().generatesNullsOnLeft()) {
+        derived = true;
+      }
+    } else {
+      set = mq.getColumnOrigins(rel.getRight(), iOutputColumn - nLeftColumns);
+      if (rel.getJoinType().generatesNullsOnRight()) {
+        derived = true;
+      }
+    }
+    if (derived) {
+      // nulls are generated due to outer join; that counts
+      // as derivation
+      set = createDerivedColumnOrigins(set);
+    }
+    return set;
+  }
+
+  public Set<RelColumnOrigin> getColumnOrigins(Correlate rel, RelMetadataQuery mq,
       int iOutputColumn) {
     int nLeftColumns = rel.getLeft().getRowType().getFieldList().size();
     Set<RelColumnOrigin> set;
@@ -177,6 +203,11 @@ public class RelMdColumnOrigins
   }
 
   public Set<RelColumnOrigin> getColumnOrigins(Exchange rel,
+      RelMetadataQuery mq, int iOutputColumn) {
+    return mq.getColumnOrigins(rel.getInput(), iOutputColumn);
+  }
+
+  public Set<RelColumnOrigin> getColumnOrigins(SortExchange rel,
       RelMetadataQuery mq, int iOutputColumn) {
     return mq.getColumnOrigins(rel.getInput(), iOutputColumn);
   }
