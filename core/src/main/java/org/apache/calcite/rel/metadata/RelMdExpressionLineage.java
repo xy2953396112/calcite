@@ -26,7 +26,9 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.SetOp;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.SortExchange;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Union;
@@ -281,12 +283,12 @@ public class RelMdExpressionLineage
   }
 
   /**
-   * Expression lineage from {@link Union}.
+   * Expression lineage from {@link SetOp}.
    *
-   * <p>For Union operator, we might be able to extract multiple origins for the
+   * <p>For SetOp operator, we might be able to extract multiple origins for the
    * references in the given expression.
    */
-  public Set<RexNode> getExpressionLineage(Union rel, RelMetadataQuery mq,
+  public Set<RexNode> getExpressionLineage(SetOp rel, RelMetadataQuery mq,
       RexNode outputExpression) {
     final RexBuilder rexBuilder = rel.getCluster().getRexBuilder();
 
@@ -347,6 +349,7 @@ public class RelMdExpressionLineage
     return createAllPossibleExpressions(rexBuilder, outputExpression, mapping);
   }
 
+
   /**
    * Expression lineage from Project.
    */
@@ -387,6 +390,14 @@ public class RelMdExpressionLineage
    * Expression lineage from Sort.
    */
   public Set<RexNode> getExpressionLineage(Sort rel, RelMetadataQuery mq,
+      RexNode outputExpression) {
+    return mq.getExpressionLineage(rel.getInput(), outputExpression);
+  }
+
+  /**
+   * Expression lineage from SortExchange.
+   */
+  public Set<RexNode> getExpressionLineage(SortExchange rel, RelMetadataQuery mq,
       RexNode outputExpression) {
     return mq.getExpressionLineage(rel.getInput(), outputExpression);
   }
@@ -495,4 +506,6 @@ public class RelMdExpressionLineage
     expr.accept(inputFinder);
     return inputFinder.inputBitSet.build();
   }
+
+
 }
