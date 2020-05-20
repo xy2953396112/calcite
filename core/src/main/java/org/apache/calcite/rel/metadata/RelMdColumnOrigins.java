@@ -27,6 +27,7 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.SetOp;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.SortExchange;
 import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rex.RexInputRef;
@@ -177,6 +178,11 @@ public class RelMdColumnOrigins
   }
 
   public Set<RelColumnOrigin> getColumnOrigins(Exchange rel,
+      RelMetadataQuery mq, int iOutputColumn) {
+    return mq.getColumnOrigins(rel.getInput(), iOutputColumn);
+  }
+
+  public Set<RelColumnOrigin> getColumnOrigins(SortExchange rel,
       RelMetadataQuery mq, int iOutputColumn) {
     return mq.getColumnOrigins(rel.getInput(), iOutputColumn);
   }

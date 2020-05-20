@@ -31,6 +31,7 @@ import org.apache.calcite.rel.core.Minus;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sample;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.SortExchange;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Union;
@@ -142,6 +143,11 @@ public class RelMdNodeTypes
   public Multimap<Class<? extends RelNode>, RelNode> getNodeTypes(Exchange rel,
       RelMetadataQuery mq) {
     return getNodeTypes(rel, Exchange.class, mq);
+  }
+
+  public Multimap<Class<? extends RelNode>, RelNode> getNodeTypes(SortExchange rel,
+      RelMetadataQuery mq) {
+    return getNodeTypes(rel, SortExchange.class, mq);
   }
 
   public Multimap<Class<? extends RelNode>, RelNode> getNodeTypes(Sample rel,

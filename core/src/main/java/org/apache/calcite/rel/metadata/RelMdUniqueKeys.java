@@ -28,6 +28,7 @@ import org.apache.calcite.rel.core.JoinInfo;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.SetOp;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.SortExchange;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rex.RexInputRef;
@@ -74,6 +75,11 @@ public class RelMdUniqueKeys
   }
 
   public Set<ImmutableBitSet> getUniqueKeys(Sort rel, RelMetadataQuery mq,
+      boolean ignoreNulls) {
+    return mq.getUniqueKeys(rel.getInput(), ignoreNulls);
+  }
+
+  public Set<ImmutableBitSet> getUniqueKeys(SortExchange rel, RelMetadataQuery mq,
       boolean ignoreNulls) {
     return mq.getUniqueKeys(rel.getInput(), ignoreNulls);
   }

@@ -27,6 +27,7 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.SortExchange;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Union;
@@ -320,6 +321,14 @@ public class RelMdAllPredicates
    * Extract predicates for an Exchange.
    */
   public RelOptPredicateList getAllPredicates(Exchange exchange,
+      RelMetadataQuery mq) {
+    return mq.getAllPredicates(exchange.getInput());
+  }
+
+  /**
+   * Extract predicates for an SortExchange.
+   */
+  public RelOptPredicateList getAllPredicates(SortExchange exchange,
       RelMetadataQuery mq) {
     return mq.getAllPredicates(exchange.getInput());
   }

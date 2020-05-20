@@ -25,6 +25,7 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.SortExchange;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
@@ -119,6 +120,11 @@ public class RelMdDistinctRowCount
   }
 
   public Double getDistinctRowCount(Exchange rel, RelMetadataQuery mq,
+      ImmutableBitSet groupKey, RexNode predicate) {
+    return mq.getDistinctRowCount(rel.getInput(), groupKey, predicate);
+  }
+
+  public Double getDistinctRowCount(SortExchange rel, RelMetadataQuery mq,
       ImmutableBitSet groupKey, RexNode predicate) {
     return mq.getDistinctRowCount(rel.getInput(), groupKey, predicate);
   }

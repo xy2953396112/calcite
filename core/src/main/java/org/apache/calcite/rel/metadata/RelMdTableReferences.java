@@ -28,6 +28,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sample;
 import org.apache.calcite.rel.core.SetOp;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.SortExchange;
 import org.apache.calcite.rel.core.TableModify;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Window;
@@ -226,6 +227,13 @@ public class RelMdTableReferences
    * Table references from Exchange.
    */
   public Set<RelTableRef> getTableReferences(Exchange rel, RelMetadataQuery mq) {
+    return mq.getTableReferences(rel.getInput());
+  }
+
+  /**
+   * Table references from SortExchange.
+   */
+  public Set<RelTableRef> getTableReferences(SortExchange rel, RelMetadataQuery mq) {
     return mq.getTableReferences(rel.getInput());
   }
 
