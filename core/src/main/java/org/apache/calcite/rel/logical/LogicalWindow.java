@@ -22,6 +22,7 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelShuttle;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexInputRef;
@@ -363,5 +364,10 @@ public final class LogicalWindow extends Window {
             groupSet, orderKeys, aggWindow.isRows(),
             aggWindow.getLowerBound(), aggWindow.getUpperBound());
     windowMap.put(windowKey, over);
+  }
+
+  @Override
+  public RelNode accept(RelShuttle shuttle) {
+    return shuttle.visit(this);
   }
 }

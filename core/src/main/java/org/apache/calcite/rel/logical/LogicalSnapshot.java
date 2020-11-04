@@ -22,6 +22,7 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelDistributionTraitDef;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelShuttle;
 import org.apache.calcite.rel.core.Snapshot;
 import org.apache.calcite.rel.metadata.RelMdCollation;
 import org.apache.calcite.rel.metadata.RelMdDistribution;
@@ -68,5 +69,10 @@ public class LogicalSnapshot extends Snapshot {
         .replaceIf(RelDistributionTraitDef.INSTANCE,
             () -> RelMdDistribution.snapshot(mq, input));
     return new LogicalSnapshot(cluster, traitSet, input, period);
+  }
+
+  @Override
+  public RelNode accept(RelShuttle shuttle) {
+    return shuttle.visit(this);
   }
 }

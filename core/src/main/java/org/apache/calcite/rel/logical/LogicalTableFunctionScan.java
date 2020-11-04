@@ -118,4 +118,6 @@ public class LogicalTableFunctionScan extends TableFunctionScan {
     // for an abstract rel?
     return planner.getCostFactory().makeHugeCost();
   }
+
+
 }
