@@ -1156,7 +1156,10 @@ public class SubstitutionVisitor {
           return null;
         }
 
-        final List<RexNode> compenProjs = shuttle.apply(queryProjs);
+        List<RexNode> compenProjs = compenProjs(queryProjs, targetProjs);
+        if (compenProjs == null) {
+          compenProjs = shuttle.apply(queryProjs);
+        }
         if (compenCond == null
             && RexUtil.isIdentity(compenProjs, target.rowType)) {
           return call.result(target);
@@ -1741,6 +1744,20 @@ public class SubstitutionVisitor {
       }
     }
     return true;
+  }
+
+  private static List<RexNode> compenProjs(List<RexNode> queryRexNodes,
+      List<RexNode> targetRexNodes) {
+    List<RexNode> compenProjs = new ArrayList<>();
+    for (int i = 0; i < queryRexNodes.size(); i++) {
+      RexNode rexNode = queryRexNodes.get(i);
+      int index = targetRexNodes.indexOf(rexNode);
+      if (index < 0) {
+        return null;
+      }
+      compenProjs.add(new RexInputRef(index, rexNode.getType()));
+    }
+    return compenProjs;
   }
 
   private static int fieldCnt(MutableRel rel) {
